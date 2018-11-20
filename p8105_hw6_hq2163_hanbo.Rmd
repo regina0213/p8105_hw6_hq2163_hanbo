@@ -1,0 +1,35 @@
+---
+title: "p8105_hw6_hq2163_hanbo"
+author: "Hanbo Qiu"
+date: "November 19, 2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+  )
+  
+library(tidyverse)
+library(ggridges)
+theme_set(theme_bw() + theme(plot.title = element_text(hjust = 0.5)))
+```
+
+##Problem 1
+
+**Import a dataset and make some alternation on some variables:**
+
+```{r}
+homicides = read_csv(file = "./homicide-data.csv") %>% 
+   mutate(city_state = str_c(city, ", ", state),
+        resolved = as.numeric(disposition == "Closed by arrest"),
+        victim_age = as.numeric(victim_age),
+        victim_race = ifelse(victim_race == "White", "white", "non-white"), 
+        victim_race = relevel(factor(victim_race),ref = "white")) %>% 
+   filter(!city_state %in% c("Dallas, TX", "Phoenix, AZ", "Kansas City, MO", "Tulsa, AL"))
+```
+
+Create a city_state variable (e.g. “Baltimore, MD”), and a binary variable indicating whether the homicide is solved. Omit cities Dallas, TX; Phoenix, AZ; and Kansas City, MO and Tulsa, AL. Modifiy victim_race to have categories white and  non-white, with white as the reference category. Modify victim_age as numeric.
