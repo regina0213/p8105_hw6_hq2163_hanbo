@@ -15,6 +15,8 @@ knitr::opts_chunk$set(
   
 library(tidyverse)
 library(ggridges)
+library(modelr)
+library(mgcv)
 theme_set(theme_bw() + theme(plot.title = element_text(hjust = 0.5)))
 ```
 
@@ -60,7 +62,7 @@ We fitted a logistic regression with resolved vs unresolved as the outcome and v
 
 **Fit the model each of the cities :**
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 nest_lm_res =
   homicides %>% 
   group_by(city_state) %>% 
@@ -134,3 +136,37 @@ birth_wt%>%
   geom_hline(aes(yintercept=0), colour="red")
 ```
 
+**Compare different models**  
+
+```{r message=FALSE, warning=FALSE}
+cv_df = 
+  crossv_mc(birth_wt, 100) %>% 
+  mutate(train = map(train, as_tibble),
+         teat = map(test, as_tibble))
+
+cv_df = 
+  cv_df %>% 
+  mutate(lin_1    = map(train, ~lm(formula = bwt ~ babysex + bhead + blength + delwt + fincome + gaweeks + mheight + mrace + parity + ppwt + smoken, data = .x)),
+         lin_2    = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+         nonlin_2 = map(train, ~gam(bwt ~ s(blength) + s(gaweeks), data = .x)),
+         lin_3    = map(train, ~lm(bwt ~ bhead * blength * babysex, data = .x)),
+         nonlin_3 = map(train, ~gam(bwt ~ te(bhead, blength, by = babysex), data = .x))) %>% 
+  mutate(rmse_lin_1    = map2_dbl(lin_1, test, ~rmse(model = .x, data = .y)),
+         rmse_lin_2    = map2_dbl(lin_2 , test, ~rmse(model = .x, data = .y)),
+         rmse_nonlin_2 = map2_dbl(nonlin_2, test, ~rmse(model = .x, data = .y)),
+         rmse_lin_3    = map2_dbl(lin_3 , test, ~rmse(model = .x, data = .y)),
+         rmse_nonlin_3 = map2_dbl(nonlin_3 , test, ~rmse(model = .x, data = .y)))
+```
+
+**Compare different models by rmse**  
+
+```{r}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  gather(key = model, value = rmse) %>% 
+  mutate(model = str_replace(model, "rmse_", ""),
+         model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
+
+When we applied the cross-validated prediction error to compare these models, we found that model lin_1 which was built based on the Stepwise regreession methods have the leaset residuls,meaning fitting the best. model 2 is the one using length at birth and gestational age as predictors. We used both linear and nonlinear to fit it. Both of them have large residuals.The model using head circumference, length, sex, and all interactions (including the three-way interaction) seems to have acceptable risiduals, but the CI of risidual is too wide which means a large deviation of predication.
