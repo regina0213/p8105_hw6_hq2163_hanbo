@@ -112,3 +112,25 @@ apply(birth_wt, 2, function(x){sum(is.na(x))})
 ```
 
 Convert some numeric variable to factor. There is no missing value for all variables.
+
+**Use Stepwise regreession methods to build model.**                                       
+```{r}
+mult.fit <- lm(bwt ~ ., data=birth_wt)
+step(mult.fit, direction='backward')
+```
+
+'Step' function uses AIC criterion for variable selection and the default option is 'backward'. As a result, it reported a reasonable linear model with variables of babysex, bhead, blength, delwt, fincome, gaweeks, mheight, mrace, parity, ppwt and smoken.                                  
+
+**show a plot of model residuals against fitted values**  
+
+```{r}
+fit_1 = lm(formula = bwt ~ babysex + bhead + blength + delwt + fincome + gaweeks + mheight + mrace + parity + ppwt + smoken, data = birth_wt)
+
+birth_wt%>% 
+  modelr::add_predictions(fit_1) %>% 
+  modelr::add_residuals(fit_1) %>% 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_hex() +
+  geom_hline(aes(yintercept=0), colour="red")
+```
+
