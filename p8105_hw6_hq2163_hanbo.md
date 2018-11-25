@@ -691,7 +691,13 @@ Problem 2
 **Import a dataset and make some alternation on some variables:**
 
 ``` r
-birthweith = read_csv(file = "./birthweight.csv") 
+birth_wt = read_csv(file = "./birthweight.csv") %>% 
+  mutate(babysex = factor(babysex, labels = c("Male", "Female")),
+         frace = factor(frace, levels = c(1, 2 ,3 ,4 ,8 ,9),labels = c("White", "Black", "Asian", "Puerto Rican", "Other", "Unknown")),
+         mrace = factor(mrace, levels = c(1, 2 ,3 ,4 ,8),labels = c("White", "Black", "Asian", "Puerto Rican", "Other")),
+         malform = factor(malform, labels = c("absent", "present")),
+         fincome = fincome * 100) %>% 
+  select(bwt, everything())
 ## Parsed with column specification:
 ## cols(
 ##   .default = col_integer(),
@@ -700,4 +706,14 @@ birthweith = read_csv(file = "./birthweight.csv")
 ##   smoken = col_double()
 ## )
 ## See spec(...) for full column specifications.
+
+apply(birth_wt, 2, function(x){sum(is.na(x))})
+##      bwt  babysex    bhead  blength    delwt  fincome    frace  gaweeks 
+##        0        0        0        0        0        0        0        0 
+##  malform menarche  mheight   momage    mrace   parity  pnumlbw  pnumsga 
+##        0        0        0        0        0        0        0        0 
+##    ppbmi     ppwt   smoken   wtgain 
+##        0        0        0        0
 ```
+
+Convert some numeric variable to factor. There is no missing value for all variables.

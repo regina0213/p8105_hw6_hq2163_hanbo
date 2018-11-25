@@ -100,7 +100,15 @@ This figure suggests a very wide range in odds ratio (and CI) for solving homici
 **Import a dataset and make some alternation on some variables:**
 
 ```{r}
-birthweith = read_csv(file = "./birthweight.csv") 
-  
+birth_wt = read_csv(file = "./birthweight.csv") %>% 
+  mutate(babysex = factor(babysex, labels = c("Male", "Female")),
+         frace = factor(frace, levels = c(1, 2 ,3 ,4 ,8 ,9),labels = c("White", "Black", "Asian", "Puerto Rican", "Other", "Unknown")),
+         mrace = factor(mrace, levels = c(1, 2 ,3 ,4 ,8),labels = c("White", "Black", "Asian", "Puerto Rican", "Other")),
+         malform = factor(malform, labels = c("absent", "present")),
+         fincome = fincome * 100) %>% 
+  select(bwt, everything())
+
+apply(birth_wt, 2, function(x){sum(is.na(x))})
 ```
 
+Convert some numeric variable to factor. There is no missing value for all variables.
