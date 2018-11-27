@@ -16,55 +16,48 @@ homicides = read_csv(file = "./homicide-data.csv") %>%
         victim_race = ifelse(victim_race == "White", "white", "non-white"), 
         victim_race = relevel(factor(victim_race),ref = "white")) %>% 
    filter(!city_state %in% c("Dallas, TX", "Phoenix, AZ", "Kansas City, MO", "Tulsa, AL"))
-## Parsed with column specification:
-## cols(
-##   uid = col_character(),
-##   reported_date = col_integer(),
-##   victim_last = col_character(),
-##   victim_first = col_character(),
-##   victim_race = col_character(),
-##   victim_age = col_character(),
-##   victim_sex = col_character(),
-##   city = col_character(),
-##   state = col_character(),
-##   lat = col_double(),
-##   lon = col_double(),
-##   disposition = col_character()
-## )
-## Warning in evalq(as.numeric(victim_age), <environment>): NAs introduced by
-## coercion
 ```
 
-Create a city\_state variable (e.g. “Baltimore, MD”), and a binary variable indicating whether the homicide is solved. Omit cities Dallas, TX; Phoenix, AZ; and Kansas City, MO and Tulsa, AL. Modifiy victim\_race to have categories white and non-white, with white as the reference category. Modify victim\_age as numeric.
+Create a `city_state` variable (e.g. “Baltimore, MD”), and a binary variable indicating whether the homicide is solved. Omit cities `Dallas, TX`, `Phoenix, AZ`, `Kansas City, MO` and `Tulsa, AL`. Modifiy `victim_race` to have categories white and non-white, with white as the reference category. Modify `victim_age` as numeric.
 
-**Fit the model of "Baltimore, MD" :**
+**Fit the model of "Baltimore, MD":**
 
 ``` r
 baltimore_df = homicides %>% 
   filter(city_state == "Baltimore, MD" )
+
 fit_logistic = 
   glm(resolved ~ victim_age + victim_sex + victim_race, 
     data = baltimore_df, 
     family = binomial()) 
+```
 
-  confi_interval=confint(fit_logistic) %>% as.data.frame() %>% 
-  tail(1) %>% 
-  gather(key = CI, value = value ) %>% 
-  mutate(CI_OR = exp(value))
+We fitted a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race as predictors for Baltimore, MD.
+
+**Calculate the OR:**
+
+``` r
+ci = fit_logistic %>% 
+  confint() %>%
+  as_tibble() %>% 
+  rename("ci_low" = "2.5 %", "ci_high" = "97.5 %") %>% 
+  mutate(ci_low = exp(ci_low), ci_high = exp(ci_high))
 ## Waiting for profiling to be done...
-  
-  broom::tidy(fit_logistic) %>% 
-  mutate(OR = exp(estimate)) %>% 
+
+fit_logistic %>% 
+  broom::tidy() %>% 
+  mutate(city_state = "Baltimore, MD", OR = exp(estimate)) %>% 
+  select(city_state, OR) %>% 
+  bind_cols(ci) %>% 
   tail(1) %>% 
-  select(estimate, OR) %>% 
   knitr::kable(digits = 3)
 ```
 
-|  estimate|     OR|
-|---------:|------:|
-|     -0.82|  0.441|
+| city\_state   |     OR|  ci\_low|  ci\_high|
+|:--------------|------:|--------:|---------:|
+| Baltimore, MD |  0.441|    0.312|      0.62|
 
-We fitted a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race as predictors for Baltimore, MD. The estimate for solving homicides comparing non-white victims to white victims keeping all other variables fixed is 0.441. The lower level confidence interval of the adjusted odds ratio of is 0.312, the upper level confidence interval is 0.62.
+The above table shows that the estimate odds ratio and CI for solving homicides comparing non-white victims to white victims keeping all other variables fixed.
 
 **Fit the model each of the cities :**
 
@@ -101,9 +94,9 @@ nest_lm_res %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-<img src="p8105_hw6_hq2163_hanbo_files/figure-markdown_github/unnamed-chunk-4-1.png" width="90%" />
+<img src="p8105_hw6_hq2163_hanbo_files/figure-markdown_github/unnamed-chunk-5-1.png" width="90%" />
 
-This figure suggests a very wide range in odds ratio (and CI) for solving homicides comparing non-white victims to white victims. -- Tampa, FL is noticeably high and, given the width of the CI, meaning that for every increasing non-white victims comparing to white victims, the OR for solving homicides is higest.
+This figure suggests a very wide range in odds ratio (and CI) for solving homicides comparing non-white victims to white victims. `Tampa, FL` is noticeably high and, given the width of the CI, meaning that for every increasing non-white victims comparing to white victims, the OR for solving homicides is higest.
 
 Problem 2
 ---------
@@ -118,15 +111,11 @@ birth_wt = read_csv(file = "./birthweight.csv") %>%
          malform = factor(malform, labels = c("absent", "present")),
          fincome = fincome * 100) %>% 
   select(bwt, everything())
-## Parsed with column specification:
-## cols(
-##   .default = col_integer(),
-##   gaweeks = col_double(),
-##   ppbmi = col_double(),
-##   smoken = col_double()
-## )
-## See spec(...) for full column specifications.
+```
 
+Convert numeric variables `babysex`, `frace`, `mrace` and `malform` to factor variables.
+
+``` r
 apply(birth_wt, 2, function(x){sum(is.na(x))})
 ##      bwt  babysex    bhead  blength    delwt  fincome    frace  gaweeks 
 ##        0        0        0        0        0        0        0        0 
@@ -136,12 +125,12 @@ apply(birth_wt, 2, function(x){sum(is.na(x))})
 ##        0        0        0        0
 ```
 
-Convert some numeric variable to factor. There is no missing value for all variables.
+The above table shows there is no missing value for all variables.
 
 **Use Stepwise regreession methods to build model.**
 
 ``` r
-mult.fit <- lm(bwt ~ ., data=birth_wt)
+mult.fit = lm(bwt ~ ., data=birth_wt)
 step(mult.fit, direction='backward')
 ## Start:  AIC=48717.83
 ## bwt ~ babysex + bhead + blength + delwt + fincome + frace + gaweeks + 
@@ -304,7 +293,7 @@ step(mult.fit, direction='backward')
 ##        -2.676e+00         -4.843e+00
 ```
 
-'Step' function uses AIC criterion for variable selection and the default option is 'backward'. As a result, it reported a reasonable linear model with variables of babysex, bhead, blength, delwt, fincome, gaweeks, mheight, mrace, parity, ppwt and smoken.
+`step` function uses AIC criterion for variable selection and the default option is `backward`. As a result, it reported a reasonable linear model with variables of `babysex`, `bhead`, `blength`, `delwt`, `fincome`, `gaweeks`, `mheight`, `mrace`, `parity`, `ppwt` and `smoken`.
 
 **show a plot of model residuals against fitted values**
 
@@ -319,9 +308,9 @@ birth_wt%>%
   geom_hline(aes(yintercept=0), colour="red")
 ```
 
-<img src="p8105_hw6_hq2163_hanbo_files/figure-markdown_github/unnamed-chunk-7-1.png" width="90%" />
+<img src="p8105_hw6_hq2163_hanbo_files/figure-markdown_github/unnamed-chunk-9-1.png" width="90%" />
 
-**Compare different models**
+**Create different models and compare these models in terms of the cross-validated prediction error**
 
 ``` r
 cv_df = 
@@ -343,7 +332,9 @@ cv_df =
          rmse_nonlin_3 = map2_dbl(nonlin_3 , test, ~rmse(model = .x, data = .y)))
 ```
 
-**Compare different models by rmse**
+`lin_1` is my model. `lin_2` and `nonlin_2` are linear and non-linear model using length at birth and gestational age as predictors. `lin_3` and `nonlin_3` are linear and non-linear model using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+
+**Make plot to compare the `RMSEs` of each model**
 
 ``` r
 cv_df %>% 
@@ -354,6 +345,6 @@ cv_df %>%
   ggplot(aes(x = model, y = rmse)) + geom_violin()
 ```
 
-<img src="p8105_hw6_hq2163_hanbo_files/figure-markdown_github/unnamed-chunk-9-1.png" width="90%" />
+<img src="p8105_hw6_hq2163_hanbo_files/figure-markdown_github/unnamed-chunk-11-1.png" width="90%" />
 
-When we applied the cross-validated prediction error to compare these models, we found that model lin\_1 which was built based on the Stepwise regreession methods have the leaset residuls,meaning fitting the best. model 2 is the one using length at birth and gestational age as predictors. We used both linear and nonlinear to fit it. Both of them have large residuals.The model using head circumference, length, sex, and all interactions (including the three-way interaction) seems to have acceptable risiduals, but the CI of risidual is too wide which means a large deviation of predication.
+When we applied the cross-validated prediction error to compare these models, we found that model lin\_1 which was built based on the Stepwise regreession methods have the least residuls, meaning fitting the best. model 2 is the one using length at birth and gestational age as predictors. We used both linear and nonlinear to fit it. Both of them have large residuals.The model using head circumference, length, sex, and all interactions (including the three-way interaction) seems to have acceptable risiduals, but the CI of risidual is too wide which means a large deviation of predication.
